@@ -1,0 +1,43 @@
+# Python cache/bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Environment variables & secrets
+.env
+*.session
+*.json
+*.key
+
+# OS / IDE cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test / coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+
+# Logs / data
+*.log
+logs/
+*.csv
+*.jsonl
+data/
+memebot_data/
+.env.bak
+

@@ -1,0 +1,91 @@
+.
+├── data
+│   ├── backtest
+│   │   ├── backtest_20250925_113651.jsonl
+│   │   └── backtest_20250925_113849.jsonl
+│   └── paper_trades.csv
+├── memebot
+│   ├── __init__.py
+│   ├── backtest
+│   │   ├── runner.py
+│   │   └── sample.jsonl
+│   ├── chains.py
+│   ├── config.py
+│   ├── exec
+│   │   ├── __init__.py
+│   │   ├── paper.py
+│   │   ├── pnl.py
+│   │   ├── positions.py
+│   │   └── sim.py
+│   ├── ingest
+│   │   ├── __init__.py
+│   │   ├── helius_webhook.py
+│   │   ├── mock.py
+│   │   ├── social
+│   │   │   ├── discord_ingest.py
+│   │   │   ├── stream_social.py
+│   │   │   ├── telegram_ingest.py
+│   │   │   └── twitter_ingest.py
+│   │   └── stream_helius.py
+│   ├── main.py
+│   ├── onchain
+│   │   ├── __init__.py
+│   │   ├── eth.py
+│   │   └── uniswap_v2.py
+│   ├── server.py
+│   ├── solana
+│   │   ├── jupiter.py
+│   │   └── trade.py
+│   ├── strategy
+│   │   ├── __init__.py
+│   │   ├── entry.py
+│   │   ├── exits.py
+│   │   ├── fusion.py
+│   │   ├── risk.py
+│   │   └── simple.py
+│   ├── tools
+│   │   ├── __init__.py
+│   │   ├── exits_tick.py
+│   │   ├── pnl_cli.py
+│   │   ├── pnl.py
+│   │   ├── run_server.py
+│   │   └── verify.py
+│   └── types.py
+├── memebot_verify.session
+├── memebot.egg-info
+│   ├── dependency_links.txt
+│   ├── PKG-INFO
+│   ├── SOURCES.txt
+│   └── top_level.txt
+├── project-structure.txt
+├── pyproject.toml
+├── pytest.ini
+├── README.md
+├── requirements.txt
+├── scripts
+│   └── update_env.sh
+├── tests
+│   ├── conftest.py
+│   ├── test_backtest.py
+│   ├── test_config_networks.py
+│   ├── test_discord_ingest.py
+│   ├── test_entry_sizing_and_limits.py
+│   ├── test_exit_loop.py
+│   ├── test_exits.py
+│   ├── test_fusion.py
+│   ├── test_integration_eth_bsc_quote.py
+│   ├── test_integration_solana_jupiter.py
+│   ├── test_paper_trade.py
+│   ├── test_pnl_report_unit.py
+│   ├── test_positions_tick_unit.py
+│   ├── test_risk_can_enter_unit.py
+│   ├── test_solana_jupiter_unit.py
+│   ├── test_solana_live_swap_unit.py
+│   ├── test_stream_social.py
+│   ├── test_telegram_ingest.py
+│   ├── test_twitter_ingest.py
+│   └── test_uniswap_quote_unit.py
+├── trades.csv
+└── trades.jsonl
+
+15 directories, 74 files
