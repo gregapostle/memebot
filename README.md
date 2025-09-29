@@ -223,3 +223,5 @@ If all these checks pass, MemeBot is fully functional in simulation, paper, back
 This software is **for educational purposes only**.  
 Using it on mainnet may result in loss of funds.  
 Use at your own risk.
+
+[![codecov](https://codecov.io/gh/gregapostle/memebot/branch/main/graph/badge.svg)](https://codecov.io/gh/gregapostle/memebot)
