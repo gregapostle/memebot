@@ -3,6 +3,7 @@ from typing import Optional
 
 
 class SocialSignal(BaseModel):
+    platform: str  # NEW: telegram | discord | twitter
     source: str
     symbol: str | None = None
     contract: str | None = None

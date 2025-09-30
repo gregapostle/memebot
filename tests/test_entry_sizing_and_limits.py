@@ -1,8 +1,8 @@
-
 import os, importlib, time
 from memebot.strategy.entry import plan_entry
 from memebot.types import SocialSignal
 from memebot.exec import pnl
+
 
 def test_sizing_by_conf_and_caller(tmp_path, monkeypatch):
     monkeypatch.setenv("MEMEBOT_DATA_DIR", str(tmp_path))
@@ -14,9 +14,17 @@ def test_sizing_by_conf_and_caller(tmp_path, monkeypatch):
     importlib.reload(entry)
     monkeypatch.setattr(entry, "can_enter_solana", lambda mint, sz: (True, "ok", 1000, 300))
 
-    sig = SocialSignal(source="test", symbol="X", contract="TokenMintX", confidence=0.9, caller="alpha")
+    sig = SocialSignal(
+        platform="test",
+        source="test",
+        symbol="X",
+        contract="TokenMintX",
+        confidence=0.9,
+        caller="alpha",
+    )
     ok, reason, size_sol, *_ = entry.plan_entry(sig)
-    assert ok and abs(size_sol - 0.1*2.0*2.0) < 1e-9
+    assert ok and abs(size_sol - 0.1 * 2.0 * 2.0) < 1e-9
+
 
 def test_daily_cap_blocks(tmp_path, monkeypatch):
     monkeypatch.setenv("MEMEBOT_DATA_DIR", str(tmp_path))
@@ -35,6 +43,13 @@ def test_daily_cap_blocks(tmp_path, monkeypatch):
 
     monkeypatch.setattr(entry, "can_enter_solana", lambda mint, sz: (True, "ok", 1000, 300))
 
-    sig = SocialSignal(source="test", symbol="Y", contract="TokenMintY", confidence=0.8, caller="any")
+    sig = SocialSignal(
+        platform="test",
+        source="test",
+        symbol="Y",
+        contract="TokenMintY",
+        confidence=0.8,
+        caller="any",
+    )
     ok, reason, *_ = entry.plan_entry(sig)
     assert not ok and reason == "daily_cap_reached"

@@ -1,4 +1,5 @@
-# Updated config.py
+# memebot/config/settings.py
+
 import os
 from typing import Optional
 from pydantic_settings import BaseSettings
@@ -6,11 +7,11 @@ from pydantic import Field, model_validator
 
 
 class Settings(BaseSettings):
-    # Core
+    # --- Core ---
     network: str = Field(default="solana")
     solana_cluster: str = Field(default="mainnet")
 
-    # Features
+    # --- Features ---
     enable_mock: bool = Field(default=True)
     mock_jupiter: bool = Field(default=False)
     allow_live: bool = Field(default=False)
@@ -20,13 +21,13 @@ class Settings(BaseSettings):
     enable_telegram: bool = Field(default=False)
     enable_discord: bool = Field(default=False)
 
-    # Trading
+    # --- Trading ---
     base_size_sol: float = Field(default=0.05)
     size_by_conf: Optional[str] = None
     caller_allowlist: Optional[str] = None
     daily_loss_cap_sol: Optional[float] = None
 
-    # Chain IDs + Routers
+    # --- Chain IDs + Routers ---
     chain_id: Optional[int] = None
     wrapped_native: Optional[str] = None
     uniswap_v2_router: Optional[str] = None
@@ -34,25 +35,32 @@ class Settings(BaseSettings):
     jupiter_base: Optional[str] = None
     solana_owner: Optional[str] = None
 
-    # Added configs
-    eth_http: str | None = None
-    solana_http: str | None = None
-    helius_webhook_secret: str | None = None
+    # --- Added configs ---
+    eth_http: Optional[str] = None
+    solana_http: Optional[str] = None
+    helius_webhook_secret: Optional[str] = None
 
+    # --- Wallet + Media tracking ---
+    watch_wallets_sol: Optional[str] = Field(default=None, alias="WATCH_WALLETS_SOL")
+    watch_wallets_eth: Optional[str] = Field(default=None, alias="WATCH_WALLETS_ETH")
+    twitter_accounts: Optional[str] = Field(default=None, alias="TWITTER_ACCOUNTS")
+    twitter_keywords: Optional[str] = Field(default=None, alias="TWITTER_KEYWORDS")
+    telegram_groups: Optional[str] = Field(default=None, alias="TELEGRAM_GROUPS")
+    discord_channels: Optional[str] = Field(default=None, alias="DISCORD_CHANNELS")
+
+    # --- Helpers ---
     def mint(self, symbol: str) -> str:
         """Return known token mint addresses for Solana symbols."""
         mapping = {
             "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # mainnet USDC
             "WSOL": self.wsol_mint,
         }
-        result: str = (
-            mapping.get(symbol.upper(), f"unknown-{symbol}") or f"unknown-{symbol}"
-        )
-        return result
+        return mapping.get(symbol.upper(), f"unknown-{symbol}") or f"unknown-{symbol}"
 
     # --- Validators ---
     @model_validator(mode="after")
     def configure_network_defaults(self):
+        """Fill defaults depending on the selected network."""
         if self.network == "ethereum":
             self.chain_id = 1
             self.wrapped_native = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"

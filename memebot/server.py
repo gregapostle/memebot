@@ -29,6 +29,7 @@ def _extract_signals(helius_payload: Dict[str, Any]) -> List[SocialSignal]:
             amt = 0.0
         if mint and amt > 0:
             sig = SocialSignal(
+                platform="helius",
                 source="helius",
                 symbol=None,
                 contract=mint,

@@ -1,54 +1,38 @@
+import logging
 import time
+from typing import Generator
 from memebot.types import SocialSignal
-from memebot.config import settings
+from memebot.config.settings import settings
 
-# Known mainnet mints
-MAINNET_BONK = "DezXAZ8bq4hGq4SjuY6rHn1uP1N1xgJg7zQxgZPL46J"
+logger = logging.getLogger("memebot.mock")
 
 
-def stream_mock_signals():
-    # Avoid SOL as a target; trade WSOL->USDC or WSOL->BONK on mainnet
-    if settings.solana_cluster == "mainnet":
-        sample = [
-            SocialSignal(
-                source="mock",
-                symbol="USDC",
-                contract=settings.mint("USDC"),
-                confidence=0.82,
-                text="caller alpha",
-                caller="alpha",
-            ),
-            SocialSignal(
-                source="mock",
-                symbol="BONK",
-                contract=MAINNET_BONK,
-                confidence=0.78,
-                text="caller beta",
-                caller="beta",
-            ),
-        ]
-    else:
-        # Devnet often lacks liquidity; pair with USDC mint
-        sample = [
-            SocialSignal(
-                source="mock",
-                symbol="USDC",
-                contract=settings.mint("USDC"),
-                confidence=0.82,
-                text="caller alpha",
-                caller="alpha",
-            ),
-            # Second signal still points at USDC to avoid WSOL target
-            SocialSignal(
-                source="mock",
-                symbol="USDC",
-                contract=settings.mint("USDC"),
-                confidence=0.75,
-                text="caller beta",
-                caller="beta",
-            ),
-        ]
+def stream_mock_signals() -> Generator[SocialSignal, None, None]:
+    """Generate fake signals for testing pipeline behavior."""
+    logger.info("[mock] starting mock signal stream")
 
-    for s in sample:
-        yield s
-        time.sleep(0.25)
+    sample = [
+        SocialSignal(
+            platform="mock",
+            source="mock_source",
+            symbol="USDC",
+            contract=settings.mint("USDC"),
+            confidence=0.82,
+            text="caller alpha",
+            caller="alpha",
+        ),
+        SocialSignal(
+            platform="mock",
+            source="mock_source",
+            symbol="BONK",
+            contract="So11111111111111111111111111111111111111112",
+            confidence=0.78,
+            text="caller beta",
+            caller="beta",
+        ),
+    ]
+
+    for sig in sample:
+        logger.debug(f"[mock] captured signal: {sig.model_dump()}")
+        yield sig
+        time.sleep(1)  # simulate streaming pace
