@@ -1,4 +1,5 @@
 import typer
+import sys
 import time
 import json
 from pathlib import Path
@@ -41,7 +42,7 @@ def load_signals(path: Path) -> List[Signal]:
 
 @app.command()
 def run(
-    file: str,
+    file: str = typer.Argument(..., help="Path to signals JSONL file"),
     debug: bool = typer.Option(False, help="Verbose logging"),
     ignore_decay: bool = typer.Option(False, help="Ignore score decay"),
     ignore_allowlist: bool = typer.Option(False, help="Ignore caller allowlist"),
@@ -109,5 +110,11 @@ def run(
     typer.echo("Use `python -m memebot.tools.pnl_cli` to analyse PnL in detail.")
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    """Entry point so tests and external callers can invoke runner programmatically."""
+    argv = argv or sys.argv[1:]
+    app(argv)
+
+
+if __name__ == "__main__":  # pragma: no cover
     app()

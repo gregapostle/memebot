@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     # --- Core ---
     network: str = Field(default="solana")
     solana_cluster: str = Field(default="mainnet")
+    solana_private_key_file: Optional[str] = Field(
+        default=None, alias="SOLANA_PRIVATE_KEY_FILE"
+    )
+    solana_private_b58: Optional[str] = Field(default=None, alias="SOLANA_PRIVATE_B58")
 
     # --- Features ---
     enable_mock: bool = Field(default=True)
@@ -82,3 +86,7 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
+
+# Force mock Jupiter when running offline
+if os.getenv("OFFLINE") == "1":
+    settings.mock_jupiter = True  # pragma: no cover

@@ -23,4 +23,13 @@ BSC = EvmChain(
     "0x10ED43C718714eb63d5aA57B78B54704E256024E",
 )
 
-CHAINS = {"ethereum": ETHEREUM, "bsc": BSC}
+chains = {
+    "solana": {
+        "id": 1,
+        "rpc": "https://api.mainnet-beta.solana.com",
+    },
+    "ethereum": {
+        "id": 2,
+        "rpc": "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
+    },
+}

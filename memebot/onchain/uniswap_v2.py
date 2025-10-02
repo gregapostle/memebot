@@ -63,3 +63,19 @@ def estimate_buy_eth_to_token(
 
     path: list[str] = [wn, token_address]
     return estimate_price_impact(amount_in, path)
+
+
+def get_contract(web3, address, abi):
+    """Helper to create a contract instance."""
+    return web3.eth.contract(address=address, abi=abi)
+
+
+def get_reserves(contract):
+    """
+    Fetch reserves from a UniswapV2-like pair contract.
+    The contract must have a `getReserves()` method.
+    """
+    try:
+        return contract.functions.getReserves().call()
+    except Exception as e:
+        return (0, 0, f"error: {e}")

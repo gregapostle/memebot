@@ -14,6 +14,7 @@ mypy memebot
 
 # 2. Unit Tests
 echo "👉 Running pytest suite..."
+export OFFLINE=1
 pytest -q --disable-warnings
 
 # 3. Manual Mode Validations (Mock Streams)

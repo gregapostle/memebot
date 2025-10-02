@@ -13,3 +13,8 @@ def w3() -> Web3:
         if not _w3.is_connected():
             raise RuntimeError("Web3 failed to connect")
     return _w3
+
+
+def get_eth_client(rpc_url: str):
+    """Return a Web3 client for the given Ethereum RPC."""
+    return Web3(Web3.HTTPProvider(rpc_url))

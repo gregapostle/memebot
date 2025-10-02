@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import inspect
 from typing import Callable, Generator, Optional
 from memebot.types import SocialSignal
 from memebot.config.watchlist import watchlist
@@ -28,7 +29,12 @@ async def run_telegram_ingest(
         )
         if debug:
             logger.debug(f"[telegram] captured signal: {sig.model_dump()}")
-        callback(sig)
+
+        # ✅ Support both sync and async callbacks
+        if inspect.iscoroutinefunction(callback):
+            await callback(sig)
+        else:
+            callback(sig)
 
 
 async def verify_telegram_credentials() -> str:

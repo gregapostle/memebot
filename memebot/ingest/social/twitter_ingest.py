@@ -77,7 +77,7 @@ async def stream_twitter() -> AsyncGenerator[Dict[str, Any], None]:
         await asyncio.sleep(POLL_INTERVAL)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
 
     async def test():
         async for sig in stream_twitter():

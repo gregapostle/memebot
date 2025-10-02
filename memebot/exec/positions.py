@@ -189,7 +189,7 @@ def tick_exits(
 
         if chain == "solana":
             amt = int(entry_out_raw)
-            if quote is None:
+            if not quote or quote in ("None", ""):
                 continue
             q = estimate_price_impact_solana(str(quote), settings.wsol_mint, amt)  # type: ignore[arg-type]
 

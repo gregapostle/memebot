@@ -27,5 +27,5 @@ def main(
         typer.echo("Stopped.")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     app()
