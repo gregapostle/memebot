@@ -23,6 +23,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
           pip install pytest pytest-cov requests-mock pytest-asyncio
+          pip install -r requirements-dev.txt
 
       - name: Run tests with coverage
         run: pytest --cov=memebot --cov-report=xml --cov-report=term-missing
