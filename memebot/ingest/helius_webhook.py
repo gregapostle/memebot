@@ -2,31 +2,28 @@ import os
 import hmac
 import hashlib
 import argparse
+import json
+import logging
 from fastapi import FastAPI, Request, Header, HTTPException
 import uvicorn
-import json
 
 from memebot.config import settings
 from memebot.strategy.fusion import Signal
 from memebot.ingest.stream_helius import enqueue_signal
+from memebot.ingest.llm_filter import filter_signal_with_llm  # ✅ Correct import
 
+logger = logging.getLogger("memebot.helius")
 app = FastAPI()
 
 
 def verify_signature(secret: str, body: bytes, signature: str) -> bool:
-    # Local dev/test mode (fake HMAC with shared secret)
     if secret:
         mac = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         return hmac.compare_digest(mac, signature)
-
-    # Production mode (Helius' Ed25519 verification)
     try:
         import base58  # type: ignore
         from nacl.signing import VerifyKey  # type: ignore
-
-        HELIUS_PUBLIC_KEY = (
-            "7hcm7kCwXL2XqZLzY4dp5RvZuj76Rxct6e1Fz9wW6nJw"  # example, replace with real
-        )
+        HELIUS_PUBLIC_KEY = "7hcm7kCwXL2XqZLzY4dp5RvZuj76Rxct6e1Fz9wW6nJw"
         verify_key = VerifyKey(base58.b58decode(HELIUS_PUBLIC_KEY))
         verify_key.verify(body, base58.b58decode(signature))
         return True
@@ -46,11 +43,12 @@ async def helius_handler(
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     payload = json.loads(body)
+    accepted, dropped = 0, 0
 
     for txn in payload.get("transactions", []):
         account = txn.get("account", "")
         description = txn.get("description", "")
-        token = txn.get("tokenTransfers", [{}])[0].get("mint", None)
+        token = txn.get("tokenTransfers", [{}])[0].get("mint")
 
         if not token:
             continue
@@ -64,9 +62,22 @@ async def helius_handler(
             confidence=1.0,
             contract=token,
         )
-        enqueue_signal(sig)
 
-    return {"ok": True}
+        # ✅ LLM filter
+        filtered = await filter_signal_with_llm(sig)
+        if not filtered or not filtered.get("valuable"):
+            dropped += 1
+            continue
+
+        sig.symbol = filtered.get("token")
+        sig.contract = filtered.get("contract", sig.contract)
+        sig.confidence = filtered.get("confidence", sig.confidence)
+
+        enqueue_signal(sig)
+        accepted += 1
+
+    logger.info(f"[helius] accepted={accepted} dropped={dropped}")
+    return {"ok": True, "accepted": accepted, "dropped": dropped}
 
 
 def start(port: int | None = None):
@@ -81,9 +92,9 @@ def start(port: int | None = None):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description="Run Helius Webhook server")
-    parser.add_argument(
-        "--port", type=int, help="Port to bind (default from $PORT or 8787)"
-    )
+    parser.add_argument("--port", type=int, help="Port to bind (default from $PORT or 8787)")
     args = parser.parse_args()
+    logger.info("[helius] starting server...")
     start(args.port)

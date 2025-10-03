@@ -162,6 +162,26 @@ def run(
         for t in threads:
             t.join(timeout=1)
 
+@app.command()
+def observe(debug: bool = False):
+    """
+    Run bot in observation mode.
+    Tracks ingestion signals and prints scoring updates without trading.
+    """
+    import asyncio
+    from memebot.ingest.social.stream_social import stream_social
+    from memebot.strategy.fusion import SignalMemory
+
+    async def run():
+        memory = SignalMemory()
+        async for sig in stream_social():
+            fused = memory.fuse(sig)
+            print(f"[observe] platform={sig.platform} source={sig.source} "
+                  f"contract={sig.contract} score={fused.score:.2f}")
+            if debug:
+                print(" full signal:", sig)
+
+    asyncio.run(run())
 
 if __name__ == "__main__":
     app()

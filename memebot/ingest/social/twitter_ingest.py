@@ -1,86 +1,156 @@
-import os
+import logging
 import asyncio
-import json
-import datetime
-import subprocess
-from typing import AsyncGenerator, Dict, Any
+import inspect
+from typing import Callable, Generator, Optional
+from memebot.types import SocialSignal
+from memebot.config.watchlist import watchlist
+from memebot.ingest.llm_filter import filter_signal_with_llm
 
-POLL_INTERVAL = int(os.getenv("TWITTER_POLL_INTERVAL", "60"))  # seconds
-TRACK_USERS = os.getenv("TWITTER_TRACK_USERS", "").split(",")
-TRACK_KEYWORDS = os.getenv("TWITTER_TRACK_KEYWORDS", "CA:").split(",")
+logger = logging.getLogger("memebot.twitter")
 
-last_seen: Dict[str, str] = {}  # user -> last tweet id
+USE_REAL_TWITTER = bool(
+    watchlist.get("twitter_accounts") or watchlist.get("twitter_keywords")
+)
 
+if USE_REAL_TWITTER:
+    from twikit import Client
 
-async def fetch_tweets(user: str):
-    """
-    Call snscrape to fetch tweets for a given user since last seen.
-    Returns a list of dicts {id, date, content}.
-    """
-    cmd = ["snscrape", "--jsonl", f"twitter-user {user}"]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    client = Client("en-US")
 
-    tweets = []
-
-    if proc.stdout is None:
-        return []
-    for line in iter(proc.stdout.readline, b""):
-        if not line:
-            break
+    async def ensure_login():
+        """
+        Loads cookies for Twitter session. 
+        You must run `client.login()` once manually and save cookies to twitter_cookies.json.
+        """
         try:
-            tweet = json.loads(line.decode("utf-8"))
-            tweets.append(tweet)
+            client.load_cookies("twitter_cookies_twikit.json")
+            logger.info("[twitter] Loaded cookies for authenticated session.")
         except Exception:
-            continue
-    proc.terminate()
-
-    if user in last_seen:
-        tweets = [t for t in tweets if str(t["id"]) > last_seen[user]]
-
-    if tweets:
-        last_seen[user] = str(max(int(t["id"]) for t in tweets))
-
-    return tweets
+            logger.error("[twitter] Missing or invalid cookies. Run manual login once:")
+            logger.error(
+                "   >>> from twikit import Client\n"
+                "   >>> client = Client('en-US')\n"
+                "   >>> client.login(auth_info_1='email', auth_info_2='username', password='password')\n"
+                "   >>> client.save_cookies('twitter_cookies.json')"
+            )
+            raise
 
 
-async def stream_twitter() -> AsyncGenerator[Dict[str, Any], None]:
-    """
-    Async generator that yields SocialSignal dicts from tracked users.
-    """
-    if not TRACK_USERS or TRACK_USERS == [""]:
+async def _process_signal(sig: SocialSignal, callback, debug: bool = False):
+    """Run a signal through the LLM filter before forwarding."""
+    result = await filter_signal_with_llm(sig)
+    if result["valuable"]:
+        sig.symbol = result.get("token") or sig.symbol
+        sig.confidence = result.get("confidence", sig.confidence)
+        if debug:
+            logger.info(f"[twitter][LLM] accepted {result}")
+        if inspect.iscoroutinefunction(callback):
+            await callback(sig)
+        else:
+            callback(sig)
+    else:
+        if debug:
+            logger.info(f"[twitter][LLM] dropped as noise: {result.get('reason')}")
+
+
+async def run_twitter_ingest(
+    callback: Callable[[SocialSignal], None], debug: bool = False
+):
+    accounts = watchlist.get("twitter_accounts", [])
+    keywords = watchlist.get("twitter_keywords", [])
+    logger.info(
+        f"[twitter] starting... monitoring accounts={accounts} keywords={keywords}"
+    )
+
+    if not USE_REAL_TWITTER:
+        # --- Mock Mode ---
+        msg_text = "Mocked tweet about BONK"
+        sig = SocialSignal(
+            platform="twitter",
+            source="mock_account",
+            symbol="BONK",
+            contract="So11111111111111111111111111111111111111112",
+            confidence=0.8,
+            text=msg_text,
+            caller="tw-user",
+        )
+        await _process_signal(sig, callback, debug)
         return
 
+    # --- Real Mode (twikit) ---
+    await ensure_login()
+
+    async def fetch_user_tweets(username: str, limit: int = 5):
+        try:
+            user = await client.get_user_by_screen_name(username)
+            tweets = await user.get_tweets("Tweets", count=limit)
+            for t in tweets:
+                sig = SocialSignal(
+                    platform="twitter",
+                    source=username,
+                    symbol=None,
+                    contract=None,
+                    confidence=0.5,
+                    text=t.text,
+                    caller=username,
+                )
+                await _process_signal(sig, callback, debug)
+        except Exception as e:
+            logger.error(f"[twitter] error fetching tweets for {username}: {e}")
+
     while True:
-        for user in TRACK_USERS:
-            try:
-                tweets = await fetch_tweets(user)
-                for t in tweets:
-                    text = t.get("content", "")
-                    if any(kw.lower() in text.lower() for kw in TRACK_KEYWORDS):
-                        yield {
-                            "type": "social",
-                            "platform": "twitter",
-                            "source": user,
-                            "content": text,
-                            "mentions": [
-                                kw
-                                for kw in TRACK_KEYWORDS
-                                if kw.lower() in text.lower()
-                            ],
-                            "confidence": 0.7,  # placeholder
-                            "ts": t.get("date", datetime.datetime.utcnow().isoformat()),
-                            "id": str(t.get("id")),
-                        }
-            except Exception as e:
-                print(f"[twitter_ingest] error for {user}: {e}")
-                continue
-        await asyncio.sleep(POLL_INTERVAL)
+        for acc in accounts:
+            await fetch_user_tweets(acc, limit=3)
+        await asyncio.sleep(60)
 
 
-if __name__ == "__main__":  # pragma: no cover
+async def verify_twitter_credentials() -> str:
+    if not USE_REAL_TWITTER:
+        return "mock-twitter-user"
+    try:
+        await ensure_login()
+    except Exception as e:
+        raise RuntimeError(f"Twitter credentials not set up: {e}")
+    return "twitter-user"
 
-    async def test():
-        async for sig in stream_twitter():
-            print(sig)
 
-    asyncio.run(test())
+def stream_twitter(limit: int = 1) -> Generator[SocialSignal, None, None]:
+    if not USE_REAL_TWITTER:
+        q: asyncio.Queue[Optional[SocialSignal]] = asyncio.Queue()
+
+        async def runner():
+            await run_twitter_ingest(q.put, debug=False)
+            await q.put(None)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(runner())
+
+        for _ in range(limit):
+            sig = loop.run_until_complete(q.get())
+            if sig is None:
+                break
+            yield sig
+
+        loop.close()
+    else:
+        raise RuntimeError("stream_twitter() is not supported in real mode")
+
+
+if __name__ == "__main__":
+
+    async def consume(sig):
+        print("[TWITTER]", sig)
+
+    async def main():
+        print("[twitter] starting ingest…")
+
+        async def heartbeat():
+            while True:
+                print("[twitter] alive, still monitoring...")
+                await asyncio.sleep(30)
+
+        asyncio.create_task(heartbeat())
+        await run_twitter_ingest(consume, debug=True)
+
+    asyncio.run(main())
